@@ -112,7 +112,44 @@ message2.put(body);
 message2.flip()
 </pre></div>
 </div>
-<p>从上面代码我们可以看出有几个不利条件：如果支持两个操作，处理一个数组不能保持原来的API。并且使用内存拷贝来完成关联两个buffer消耗性能。这简单，但不是最佳的处理方式。</p>
+<p>从上面代码我们可以看出有几个不利条件：如果支持两个操作，处理一个数组不能保持原来简单的API。并且使用内存拷贝来完成关联两个buffer是有性能消耗。这简单，但不是最佳的处理方式。</p>
+<p>让我们看看CompositeByteBuf的使用。如下所示：</p>
+<p><em>Listing 5.4 CompositeByteBuf in action</em></p>
+<div class="highlight-python"><div class="highlight"><pre>CompositeByteBuf compBuf = ...;
+ByteBuf heapBuf = ...;
+ByteBuf directBuf = ...;
+compBuf.addComponent(heapBuf, directBuf);       #1
+.....
+compBuf.removeComponent(0);                     #2
+for (ByteBuf buf: compBuf) {                    #3
+        System.out.println(buf.toString());
+}
+
+#1 Append ByteBuf instances to the composite (追加ByteBuf实例到组合Buffer)
+#2 Remove ByteBuf on index 0 (heapBuf here) (移除第一个ByteBuf)
+#3 Loop over all the composed ByteBuf (循环所有的组合ByteBuf)
+</pre></div>
+</div>
+<p>里面还有更多的方法，但是我认为你会很容易看明白。Netty的API很清楚的描述，以便你使用为演示的其他方法。参照API文档很容易的理解他们是做什么的。</p>
+<p>因为CompositeBytebuf的性质，你将无法访问底层实现数组。</p>
+<p><em>Listing 5.5 Access data</em></p>
+<div class="highlight-python"><div class="highlight"><pre>CompositeBuf compBuf = ...;
+if (!compBuf.hasArray()) {                                 #1
+    int length = compBuf.readableBytes();                  #2
+    byte[] array = new byte[length];                       #3
+    compBuf.getBytes(array);                               #4
+    YourImpl.method(array, 0, array.length);               #5
+}
+
+#1 Check if ByteBuf not backed by array which will be false for a composite buffer (检查不是底层数组实现)
+#2 Get amount of readable bytes （获取可读的字节数）
+#3 Allocate new array with length of readable bytes (分配可读字节数长度的数组)
+#4 Read bytes into array （读取字节到数组中）
+#5 Call method that takes array, offset, length as parameter(访问数组)
+</pre></div>
+</div>
+<p>CompositeByteBuf是ByteBuf的一个之类，你可以正常操作buffer,还提供额外的操作。</p>
+<p>Netty将会优化在socket上的读写操作，同时使用CompositeByteBuf。</p>
 </div>
 </div>
 </div>
