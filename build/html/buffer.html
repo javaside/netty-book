@@ -53,7 +53,7 @@
 Netty使用缓存池和其他技巧来加速并且保持内存使用率合理的水平。对于上述你不需要去做任何事情，但是当你去开发一个Netty的应用，你应该尽快去处理你的数据并且释放缓存池的资源。</p>
 <p>Netty的Buffer API 提供几个优势:</p>
 <ul class="simple">
-<li>如果需要，你可以定义自己的Buffer类型。</li>
+<li>可以定义自己的Buffer类型。</li>
 <li>透明的零拷贝的实现是通过内置的复合Buffer类型构建的。</li>
 <li>容量可以按需要扩大，类似StringBuffer。</li>
 <li>切换读写模型不需要访问flip()方法。</li>
@@ -62,39 +62,39 @@ Netty使用缓存池和其他技巧来加速并且保持内存使用率合理的
 <li>引用计数</li>
 <li>缓存池</li>
 </ul>
-<p>在本章的最后一节我们深入来探讨一下这些优势，包括缓存池。让我们从字节容器开始，这个可能是首个需要的。</p>
+<p>在本章的最后一节我们深入来探讨一下这些优势，包括缓存池。让我们从字节容器开始，这个可能是第一个需要的。</p>
 </div>
 <div class="section" id="bytebuf">
 <h1>ByteBuf-字节容器<a class="headerlink" href="#bytebuf" title="Permalink to this headline">¶</a></h1>
-<p>每当你需要远端交互时，比如数据库，这之间的相互通讯都是需要用字节来完成的。对于这点和其他原因来说，一个高效，方便和有用的数据结构是必须的，Netty的ByteBuf实现和满足这些要求，做成一个最合理的数据容器，优化用字节处理和交互。</p>
-<p>ByteBuf是一个高效添加和获取字节的数据容器。这样的读写操作非常简单，他提供了读写两个索引。允许你按顺序读取数据和跳回重新读取数据。你只需要调整读索引然后开始重新读操作。</p>
+<p>每当你需要远端交互时，比如数据库，其相互通讯都是需要用字节来完成的。对于这点和其他原因来说，一个高效，方便和有用的数据结构是必须的，Netty的ByteBuf实现和满足这些要求，做成一个最合理的数据容器，优化用字节处理和交互。</p>
+<p>ByteBuf是一个高效读写字节的数据容器。这样的读写操作非常简单，他提供了读写两个索引。允许你按顺序读取数据和跳回重新读取数据。你只需要调整读索引然后开始重新读操作。</p>
 <div class="section" id="id1">
 <h2>怎样工作的<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
 <p>在一些数据写入到ByteBuf，他的writeIndex根据写入的数量自动增长。在你开始读取数据之后，他的readerIndex索引也会自己增长。你可以读取从readerIndex到writerIndex之间的字节。当readerIndex和writerIndex位置相同时,ByteBuf是不可以读取的，所以继续读取会引发IndexOutOfBoundsException异常，类似读取超过数组容量的现象。</p>
-<p>访问Buffer的任何方法开始读写，读写索引都会自动的移动。还有些相关的操作比如“set”和“get”字节也是一样的会自动更新对应的读写索引。这些都不需要去移动相关的索引，但是操作相关的索引是可以的。</p>
-<p>一个ByteBuf可以有一个最大的容量来设置可以处理的最大的数据的上限，试图移动读写索引超过最大容量将会获得一个异常。默认最大限制是Integer.MAX_VALUE.</p>
+<p>访问Buffer的任何方法开始读写，读写索引都会自动的移动。还有些相关的操作比如“set”和“get”字节也是一样的会自动更新对应的读写索引。这些都不需要去自己再去移动相关的索引，但是操作相关的索引是可以的。</p>
+<p>一个ByteBuf有一个最大的容量来设置可以处理的最大的数据的上限，试图移动读写索引超过最大容量将会获得一个异常。默认最大限制是Integer.MAX_VALUE.</p>
 <img alt="_images/5.1.png" src="_images/5.1.png" />
 <p>从图5.1可以看出，ByteBuf类似一个字节数组，最大的不同就是增加了能控制访问buffer数据的读写索引。</p>
-<p>在后面的章节，你将学习到更多ByteBuf可执行的操作。现在，记住这点，让我们来回顾一下你最可能用到不同类型的ByteBuf。</p>
+<p>在后面的章节，你将学习到更多ByteBuf可执行的操作。现在，让我们来回顾一下你最可能用到不同类型的ByteBuf。</p>
 </div>
 <div class="section" id="id2">
 <h2>ByteBuf 不同类型<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
-<p>当你用Netty时，你会遇到三种不同的ByteBuf类型(有跟多的类型，但是都是内部使用)。你可以能最终实现自己的，但是这已经超出我们讨论的范围。让我们看看，你最有可能感兴趣提供的类型。</p>
+<p>当你用Netty时，你会遇到三种不同的ByteBuf类型(有更多的类型，但是都是内部使用)。你可以终实现自己的ByteBuf，但是这已经超出我们讨论的范围。让我们看看，你最有可能感兴趣提供的类型。</p>
 <div class="section" id="heap-buffers">
 <h3>HEAP BUFFERS<a class="headerlink" href="#heap-buffers" title="Permalink to this headline">¶</a></h3>
-<p>最常用到的ByteBuf类型是存储在JVM的堆内存中。这是通过将其存储在一个底层实现数组进行。当你没有用到缓存池，这种类型是很快的分配和销毁的。他当然也提供直接访问底层数组，这使得很容易的与遗留代码交互。访问不是堆ByteBuf的数组将会抛出UnsupportedOperationException异常。正因如此，所以最好每次都用hassArray()方法检查是不是底层数组。如果你曾今用过JDK的ByteBuffer你会觉得这种模式非常熟悉。</p>
+<p>最常用到的ByteBuf类型是存储在JVM的堆内存中。这是通过将存储在一个底层数组实现的。当你没有用到缓存池，这种类型是很快的分配和销毁的。他当然也提供直接访问底层数组，这使得很容易的与原来编写的代码整合。访问不是堆ByteBuf的数组将会抛出UnsupportedOperationException异常。正因如此，所以最好每次都用hassArray()方法检查是不是底层数组。如果你曾今用过JDK的ByteBuffer你会觉得这种模式非常熟悉。</p>
 </div>
 <div class="section" id="direct-buffers">
 <h3>DIRECT BUFFERS<a class="headerlink" href="#direct-buffers" title="Permalink to this headline">¶</a></h3>
-<p>其他的ByteBuf的实现都是Direct Buffer。Direct的意思就是在分配内存时直接从JVM堆内存以外的主存中分配。在堆内存中你看不见内存的使用情况。计算你的应用程序将用到最大内存以及如何限制他，这点你必须考虑到，只考虑最大堆大小是不够的。当在socket传输数据的时候，使用Direct Buffer是最佳的选择。事实上，如果你使用非Direct buffer，JVM内部将从你的Buffer中拷贝到Direct Buffer，然后再在socket中传输。</p>
-<p>Direct Buffer在分配和销毁方面要比heap buffer昂贵的多。这也是其中一个原因，为什么Netty支持缓存池来消除这些问题。你不能通过底层数组来访问这些数据，所以，如果你需要兼容原来的代码，你必须拷贝这些数据。</p>
-<p>下面将展示，在没有访问底层数组的情况下，你如何获取数组中的数据并且访问你的方法。</p>
+<p>其他的ByteBuf的实现都是Direct Buffer。Direct的意思就是在分配内存时直接从JVM堆内存以外的主存中分配。在堆内存中你看不见内存的使用情况。你必须考虑计算你的应用将会用到的最大内存以及如何限制的使用他，只考虑最大堆大小是不够的。当在socket传输数据的时候，使用Direct Buffer是最佳的选择。事实上，如果你使用非Direct buffer，JVM内部将从你的Buffer中拷贝到Direct Buffer，然后再在socket中传输。</p>
+<p>Direct Buffer在分配和销毁方面要比heap buffer昂贵的多。这也是为什么Netty支持缓存池来消除这些问题的一个原因。你不能通过底层数组来访问这些数据，所以，如果你需要兼容原来的代码，你必须拷贝这些数据。</p>
+<p>下面将展示，在没有访问底层数组的情况下，你如何获取数组中的数据并且调用你的方法。</p>
 <img alt="_images/5.2.png" src="_images/5.2.png" />
 <p>正如你看到的，Direct Buffer 需要更多的工作，涉及到复制操作。如果你希望访问数据是一个数组，你最好使用heap buffer。</p>
 </div>
 <div class="section" id="composite-buffers">
 <h3>COMPOSITE BUFFERS<a class="headerlink" href="#composite-buffers" title="Permalink to this headline">¶</a></h3>
-<p>最后一个ByteBuf的实现是CompositeByteBuf。从他的名字就知道是什么意思，他可以组合不同的ByteBuf实例，并且提供基于其不同实例之上的一个视图。你还可以即时的增肌和删除这些ByteBuf实例，就像一个List一样。如果你以前使用JDK的ByteBuffer，你会发现你错过了这些功能。CompositeByteBuf只是一个基于其他ByteBuf之上的视图，这个hasArray()方法将会返回false,因为他包含了几个Direct 和 非Direct类型的ByteBuf实例。</p>
+<p>最后一个ByteBuf的实现是CompositeByteBuf。从他的名字就知道是什么意思，他可以组合不同的ByteBuf实例，并且提供基于其不同实例之上的一个视图。你还可以即时的增加和删除这些ByteBuf实例，就像一个List一样。如果你以前使用JDK的ByteBuffer，你会发现你错过了这些功能。CompositeByteBuf只是一个基于其他ByteBuf之上的视图，这个hasArray()方法将会返回false,因为他包含了几个Direct 和 非Direct类型的ByteBuf实例。</p>
 <p>例如，一条消息由heade和body两部分组成。在模块的应用程序中，当消息发送出去后，这两部分可能被不同的模块生成和组装。你也可以一直使用同一个body,而仅仅改变header。所以，这也让我体会到，这里任何时间都没有分配一个新的的buffer。</p>
 <p>CompositeByteBuf非常完美，他不需要内存拷贝，而且提供非组合buffer相同的API。</p>
 <p>下图展示一个CompositeByteBuf如何用来组成header和body。</p>
@@ -112,7 +112,7 @@ message2.put(body);
 message2.flip()
 </pre></div>
 </div>
-<p>从上面代码我们可以看出有几个不利条件：如果支持两个操作，处理一个数组不能保持原来简单的API。并且使用内存拷贝来完成关联两个buffer是有性能消耗。这简单，但不是最佳的处理方式。</p>
+<p>从上面代码我们可以看出有几个不利条件：如果支持两个Buffer操作，不能保持原来简单的API。使用内存拷贝来完成关联两个buffer是有性能消耗的。这样很简单，但不是最佳的处理方式。</p>
 <p>让我们看看CompositeByteBuf的使用。如下所示：</p>
 <p><em>Listing 5.4 CompositeByteBuf in action</em></p>
 <div class="highlight-python"><div class="highlight"><pre>CompositeByteBuf compBuf = ...;
@@ -130,7 +130,7 @@ for (ByteBuf buf: compBuf) {                    #3
 #3 Loop over all the composed ByteBuf (循环所有的组合ByteBuf)
 </pre></div>
 </div>
-<p>里面还有更多的方法，但是我认为你会很容易看明白。Netty的API很清楚的描述，以便你使用为演示的其他方法。参照API文档很容易的理解他们是做什么的。</p>
+<p>CompositeByteBuf里面还有更多的方法，但是我认为你会很容易看明白是什么意思。Netty的API都有很清楚的描述，以便你使用未演示的其他方法。参照API文档很容易的理解他们是做什么的。</p>
 <p>因为CompositeBytebuf的性质，你将无法访问底层实现数组。</p>
 <p><em>Listing 5.5 Access data</em></p>
 <div class="highlight-python"><div class="highlight"><pre>CompositeBuf compBuf = ...;
@@ -148,10 +148,15 @@ if (!compBuf.hasArray()) {                                 #1
 #5 Call method that takes array, offset, length as parameter(访问数组)
 </pre></div>
 </div>
-<p>CompositeByteBuf是ByteBuf的一个之类，你可以正常操作buffer,还提供额外的操作。</p>
-<p>Netty将会优化在socket上的读写操作，同时使用CompositeByteBuf。</p>
+<p>CompositeByteBuf是ByteBuf的一个子类，你可以像正常的ByteBuf操作,他还提供其他额外的操作。</p>
+<p>Netty使用CompositeByteBuf会尽可能的优化在socket上的读写操作。这就意味着Netty使用聚散读写socket是不会有性能的损失，或者从JDK内存泄漏问题受到影响。所有的这一切在Netty的核心里已经做了，所以你不用担心太多。</p>
+<p>CompositeByteBuf类并不存在JDK中，他只是提供了比JDK java.nio包中的Buffer API 更丰富的功能。</p>
 </div>
 </div>
+</div>
+<div class="section" id="id3">
+<h1>ByteBuf的字节操作<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h1>
+<p>(待续。。。)</p>
 </div>
 
 
@@ -173,6 +178,7 @@ if (!compBuf.hasArray()) {                                 #1
 </li>
 </ul>
 </li>
+<li><a class="reference internal" href="#id3">ByteBuf的字节操作</a></li>
 </ul>
 
   <h3>This Page</h3>
