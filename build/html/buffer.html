@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Buffer API &mdash; netty-book v1.0.0 documentation</title>
+    <title>第五章 Buffers &mdash; netty-book v1.0.0 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -24,7 +24,8 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="netty-book v1.0.0 documentation" href="index.html" /> 
+    <link rel="top" title="netty-book v1.0.0 documentation" href="index.html" />
+    <link rel="prev" title="Netty In Action (Netty4.0) 翻译" href="index.html" /> 
   </head>
   <body>
     <div class="related">
@@ -33,6 +34,9 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="index.html" title="Netty In Action (Netty4.0) 翻译"
+             accesskey="P">previous</a> |</li>
         <li><a href="index.html">netty-book v1.0.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
@@ -42,8 +46,10 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <div class="section" id="buffer-api">
-<h1>Buffer API<a class="headerlink" href="#buffer-api" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="buffers">
+<h1>第五章 Buffers<a class="headerlink" href="#buffers" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="buffer-api">
+<h2>Buffer API<a class="headerlink" href="#buffer-api" title="Permalink to this headline">¶</a></h2>
 <p>(<em>翻译很生硬，仅做互相学习交流使用，发现问题欢迎反馈。</em>)</p>
 <p>Netty的Buffer API 包含两个接口:</p>
 <ul class="simple">
@@ -66,11 +72,11 @@ Netty使用缓存池和其他技巧来加速并且保持内存使用率合理的
 <p>在本章的最后一节我们深入来探讨一下这些优势，包括缓存池。让我们从字节容器开始，这个可能是第一个需要的。</p>
 </div>
 <div class="section" id="bytebuf">
-<h1>ByteBuf-字节容器<a class="headerlink" href="#bytebuf" title="Permalink to this headline">¶</a></h1>
+<h2>ByteBuf-字节容器<a class="headerlink" href="#bytebuf" title="Permalink to this headline">¶</a></h2>
 <p>每当你需要远端交互时，比如数据库，其相互通讯都是需要用字节来完成的。对于这点和其他原因来说，一个高效，方便和有用的数据结构是必须的，Netty的ByteBuf实现和满足这些要求，做成一个最合理的数据容器，优化用字节处理和交互。</p>
 <p>ByteBuf是一个高效读写字节的数据容器。这样的读写操作非常简单，他提供了读写两个索引。允许你按顺序读取数据和跳回重新读取数据。你只需要调整读索引然后开始重新读操作。</p>
 <div class="section" id="id1">
-<h2>怎样工作的<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<h3>怎样工作的<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
 <p>在一些数据写入到ByteBuf，他的writeIndex根据写入的数量自动增长。在你开始读取数据之后，他的readerIndex索引也会自己增长。你可以读取从readerIndex到writerIndex之间的字节。当readerIndex和writerIndex位置相同时,ByteBuf是不可以读取的，所以继续读取会引发IndexOutOfBoundsException异常，类似读取超过数组容量的现象。</p>
 <p>访问Buffer的任何方法开始读写，读写索引都会自动的移动。还有些相关的操作比如“set”和“get”字节也是一样的会自动更新对应的读写索引。这些都不需要去自己再去移动相关的索引，但是操作相关的索引是可以的。</p>
 <p>一个ByteBuf有一个最大的容量来设置可以处理的最大的数据的上限，试图移动读写索引超过最大容量将会获得一个异常。默认最大限制是Integer.MAX_VALUE.</p>
@@ -79,14 +85,14 @@ Netty使用缓存池和其他技巧来加速并且保持内存使用率合理的
 <p>在后面的章节，你将学习到更多ByteBuf可执行的操作。现在，让我们来回顾一下你最可能用到不同类型的ByteBuf。</p>
 </div>
 <div class="section" id="id2">
-<h2>ByteBuf 不同类型<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<h3>ByteBuf 不同类型<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
 <p>当你用Netty时，你会遇到三种不同的ByteBuf类型(有更多的类型，但是都是内部使用)。你可以终实现自己的ByteBuf，但是这已经超出我们讨论的范围。让我们看看，你最有可能感兴趣提供的类型。</p>
 <div class="section" id="heap-buffers">
-<h3>HEAP BUFFERS<a class="headerlink" href="#heap-buffers" title="Permalink to this headline">¶</a></h3>
+<h4>HEAP BUFFERS<a class="headerlink" href="#heap-buffers" title="Permalink to this headline">¶</a></h4>
 <p>最常用到的ByteBuf类型是存储在JVM的堆内存中。这是通过将存储在一个底层数组实现的。当你没有用到缓存池，这种类型是很快的分配和销毁的。他当然也提供直接访问底层数组，这使得很容易的与原来编写的代码整合。访问不是堆ByteBuf的数组将会抛出UnsupportedOperationException异常。正因如此，所以最好每次都用hassArray()方法检查是不是底层数组。如果你曾今用过JDK的ByteBuffer你会觉得这种模式非常熟悉。</p>
 </div>
 <div class="section" id="direct-buffers">
-<h3>DIRECT BUFFERS<a class="headerlink" href="#direct-buffers" title="Permalink to this headline">¶</a></h3>
+<h4>DIRECT BUFFERS<a class="headerlink" href="#direct-buffers" title="Permalink to this headline">¶</a></h4>
 <p>其他的ByteBuf的实现都是Direct Buffer。Direct的意思就是在分配内存时直接从JVM堆内存以外的主存中分配。在堆内存中你看不见内存的使用情况。你必须考虑计算你的应用将会用到的最大内存以及如何限制的使用他，只考虑最大堆大小是不够的。当在socket传输数据的时候，使用Direct Buffer是最佳的选择。事实上，如果你使用非Direct buffer，JVM内部将从你的Buffer中拷贝到Direct Buffer，然后再在socket中传输。</p>
 <p>Direct Buffer在分配和销毁方面要比heap buffer昂贵的多。这也是为什么Netty支持缓存池来消除这些问题的一个原因。你不能通过底层数组来访问这些数据，所以，如果你需要兼容原来的代码，你必须拷贝这些数据。</p>
 <p>下面将展示，在没有访问底层数组的情况下，你如何获取数组中的数据并且调用你的方法。</p>
@@ -94,7 +100,7 @@ Netty使用缓存池和其他技巧来加速并且保持内存使用率合理的
 <p>正如你看到的，Direct Buffer 需要更多的工作，涉及到复制操作。如果你希望访问数据是一个数组，你最好使用heap buffer。</p>
 </div>
 <div class="section" id="composite-buffers">
-<h3>COMPOSITE BUFFERS<a class="headerlink" href="#composite-buffers" title="Permalink to this headline">¶</a></h3>
+<h4>COMPOSITE BUFFERS<a class="headerlink" href="#composite-buffers" title="Permalink to this headline">¶</a></h4>
 <p>最后一个ByteBuf的实现是CompositeByteBuf。从他的名字就知道是什么意思，他可以组合不同的ByteBuf实例，并且提供基于其不同实例之上的一个视图。你还可以即时的增加和删除这些ByteBuf实例，就像一个List一样。如果你以前使用JDK的ByteBuffer，你会发现你错过了这些功能。CompositeByteBuf只是一个基于其他ByteBuf之上的视图，这个hasArray()方法将会返回false,因为他包含了几个Direct 和 非Direct类型的ByteBuf实例。</p>
 <p>例如，一条消息由heade和body两部分组成。在模块的应用程序中，当消息发送出去后，这两部分可能被不同的模块生成和组装。你也可以一直使用同一个body,而仅仅改变header。所以，这也让我体会到，这里任何时间都没有分配一个新的的buffer。</p>
 <p>CompositeByteBuf非常完美，他不需要内存拷贝，而且提供非组合buffer相同的API。</p>
@@ -156,10 +162,10 @@ if (!compBuf.hasArray()) {                                 #1
 </div>
 </div>
 <div class="section" id="id3">
-<h1>ByteBuf的字节操作<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h1>
+<h2>ByteBuf的字节操作<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
 <p>ByteBuf提供了很多操作，他允许修改读取内容。你将很快的掌握他，他提供了更好的用户体验和性能。</p>
 <div class="section" id="id4">
-<h2>随机访问索引<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h2>
+<h3>随机访问索引<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h3>
 <p>像一个普通的原始字节数组，ByteBuf使用从零开始的索引。这就意味着第一个字节的索引总是0，最后一个索引总是(容量-1)。可以迭代读取Buffer所有的字节(如下代码所示)，不需要知道其内部如何实现。</p>
 <p><em>Listing 5.7 Access data</em></p>
 <div class="highlight-python"><div class="highlight"><pre>ByteBuf buffer = ...;
@@ -172,12 +178,12 @@ for (int i = 0; i &lt; buffer.capacity(); i ++) {
 <p>从上面代码我们可以知道，读取数据时并没有使用readerIndex和writerIndex索引。如果你需要，你可以通过调用readerIndex和writeIndex索引来访问其内部数据。</p>
 </div>
 <div class="section" id="id5">
-<h2>顺序访问索引<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h2>
+<h3>顺序访问索引<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h3>
 <p>ByteBuf提供两个指针变量来实现顺序读写操作，readerIndex用于读操作，writeIndex用于写操作。这里再次和JDK的ByteBuffer不同，JDK的ByteBuffer只有一个指针，所以需要flip()方法来切换读写模式。下图显示了被两个指针分成三个区域片段。</p>
 <img alt="_images/5.3.png" src="_images/5.3.png" />
 </div>
 <div class="section" id="id6">
-<h2>可废弃的字节<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h2>
+<h3>可废弃的字节<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h3>
 <p>可废弃的字节片段是已经读取过的，所以他是可丢弃的。刚开始，可废弃片段大小为0，但是他的大小随着读操作增加。这里只包含“read”操作，“get”操作是不会移动readerIndex索引。读过的片段可以通过调用discardReadBytes()方法来清除未用空间。</p>
 <p>下图是在调用discardReadBytes()方法之前的 ByteBuf片段。</p>
 <img alt="_images/5.3.png" src="_images/5.3.png" />
@@ -188,8 +194,9 @@ for (int i = 0; i &lt; buffer.capacity(); i ++) {
 <p>当然，你可以平凡调用discardReadBytes()方法提供更多可写的空间。请注意，调用discardReadBytes()方法有可能涉及一个内存拷贝，因为它需要将可读的字节（内容）到ByteBuf开始。这些操作是影响性能的，所以当你需要他或者从中获益时才使用他。因此你需要尽快的释放内存。</p>
 </div>
 <div class="section" id="id7">
-<h2>可读字节(实际的内容)<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h2>
+<h3>可读字节(实际的内容)<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h3>
 <p>(待续。。。)</p>
+</div>
 </div>
 </div>
 
@@ -201,7 +208,8 @@ for (int i = 0; i &lt; buffer.capacity(); i ++) {
         <div class="sphinxsidebarwrapper">
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">Buffer API</a></li>
+<li><a class="reference internal" href="#">第五章 Buffers</a><ul>
+<li><a class="reference internal" href="#buffer-api">Buffer API</a></li>
 <li><a class="reference internal" href="#bytebuf">ByteBuf-字节容器</a><ul>
 <li><a class="reference internal" href="#id1">怎样工作的</a></li>
 <li><a class="reference internal" href="#id2">ByteBuf 不同类型</a><ul>
@@ -220,7 +228,12 @@ for (int i = 0; i &lt; buffer.capacity(); i ++) {
 </ul>
 </li>
 </ul>
+</li>
+</ul>
 
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Netty In Action (Netty4.0) 翻译</a></p>
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
@@ -244,6 +257,9 @@ for (int i = 0; i &lt; buffer.capacity(); i ++) {
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              >index</a></li>
+        <li class="right" >
+          <a href="index.html" title="Netty In Action (Netty4.0) 翻译"
+             >previous</a> |</li>
         <li><a href="index.html">netty-book v1.0.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
