@@ -3,20 +3,20 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to netty-book's documentation!
-======================================
-
-Contents:
 
 .. toctree::
    :maxdepth: 2
 
 
 
-Indices and tables
-==================
+Netty In Action 翻译说明
+=========================
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+翻译很生硬，仅做互相学习交流使用，发现问题欢迎反馈。
+
+
+
+Netty In Action 目录
+=====================
+
 

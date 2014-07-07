@@ -1,6 +1,9 @@
 Buffer API
 =============
 
+(*翻译很生硬，仅做互相学习交流使用，发现问题欢迎反馈。*)
+
+
 Netty的Buffer API 包含两个接口:
 
 * ByteBuf
@@ -157,6 +160,57 @@ CompositeByteBuf类并不存在JDK中，他只是提供了比JDK java.nio包中�
 
 ByteBuf的字节操作
 ===================
- 
+
+ByteBuf提供了很多操作，他允许修改读取内容。你将很快的掌握他，他提供了更好的用户体验和性能。
+
+
+随机访问索引
+----------------
+
+像一个普通的原始字节数组，ByteBuf使用从零开始的索引。这就意味着第一个字节的索引总是0，最后一个索引总是(容量-1)。可以迭代读取Buffer所有的字节(如下代码所示)，不需要知道其内部如何实现。
+
+*Listing 5.7 Access data*
+::
+	ByteBuf buffer = ...;
+	for (int i = 0; i < buffer.capacity(); i ++) {
+        	byte b = buffer.getByte(i);
+		System.out.println((char) b); 
+	}
+
+从上面代码我们可以知道，读取数据时并没有使用readerIndex和writerIndex索引。如果你需要，你可以通过调用readerIndex和writeIndex索引来访问其内部数据。
+
+
+顺序访问索引
+----------------
+
+ByteBuf提供两个指针变量来实现顺序读写操作，readerIndex用于读操作，writeIndex用于写操作。这里再次和JDK的ByteBuffer不同，JDK的ByteBuffer只有一个指针，所以需要flip()方法来切换读写模式。下图显示了被两个指针分成三个区域片段。
+
+.. image:: _static/image/5.3.png
+
+
+可废弃的字节
+-------------
+
+可废弃的字节片段是已经读取过的，所以他是可丢弃的。刚开始，可废弃片段大小为0，但是他的大小随着读操作增加。这里只包含“read”操作，“get”操作是不会移动readerIndex索引。读过的片段可以通过调用discardReadBytes()方法来清除未用空间。
+
+下图是在调用discardReadBytes()方法之前的 ByteBuf片段。
+
+.. image:: _static/image/5.3.png
+
+
+正如你看到的，可废弃片段区域包含了一些空间，他可以重新使用。我们可以通过调用discardReadBytes()方法来重新使用这些空间。
+
+下图是调用discardReadBytes()后的ByteBuf片段。
+
+.. image:: _static/image/5.5.png
+
+要注意在调用discardReadBytes()之后，有没有保证可写字节内容。在大多情况下，可写的字节不会被移动，根据不同的buffer实现，甚至可以填充完成不同的数据。
+
+当然，你可以平凡调用discardReadBytes()方法提供更多可写的空间。请注意，调用discardReadBytes()方法有可能涉及一个内存拷贝，因为它需要将可读的字节（内容）到ByteBuf开始。这些操作是影响性能的，所以当你需要他或者从中获益时才使用他。因此你需要尽快的释放内存。
+
+
+可读字节(实际的内容)
+-------------------------
+
 (待续。。。)
 
