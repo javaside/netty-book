@@ -48,9 +48,9 @@
             
   <div class="section" id="buffers">
 <h1>第五章 Buffers<a class="headerlink" href="#buffers" title="Permalink to this headline">¶</a></h1>
+<p>(<em>翻译很生硬，仅做互相学习交流使用，发现问题欢迎反馈。2014-07-08更新</em>)</p>
 <div class="section" id="buffer-api">
 <h2>Buffer API<a class="headerlink" href="#buffer-api" title="Permalink to this headline">¶</a></h2>
-<p>(<em>翻译很生硬，仅做互相学习交流使用，发现问题欢迎反馈。</em>)</p>
 <p>Netty的Buffer API 包含两个接口:</p>
 <ul class="simple">
 <li>ByteBuf</li>
@@ -191,12 +191,119 @@ for (int i = 0; i &lt; buffer.capacity(); i ++) {
 <p>下图是调用discardReadBytes()后的ByteBuf片段。</p>
 <img alt="_images/5.5.png" src="_images/5.5.png" />
 <p>要注意在调用discardReadBytes()之后，有没有保证可写字节内容。在大多情况下，可写的字节不会被移动，根据不同的buffer实现，甚至可以填充完成不同的数据。</p>
-<p>当然，你可以平凡调用discardReadBytes()方法提供更多可写的空间。请注意，调用discardReadBytes()方法有可能涉及一个内存拷贝，因为它需要将可读的字节（内容）到ByteBuf开始。这些操作是影响性能的，所以当你需要他或者从中获益时才使用他。因此你需要尽快的释放内存。</p>
+<p>当然，你可以平凡调用discardReadBytes()方法提供更多可写的空间。请注意，调用discardReadBytes()方法有可能涉及一个内存拷贝，因为它需要将可读的字节（内容）移到ByteBuf开始。这些操作是影响性能的，所以当你需要他或者从中获益时才使用他。你也需要尽快的释放内存。</p>
 </div>
 <div class="section" id="id7">
 <h3>可读字节(实际的内容)<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h3>
-<p>(待续。。。)</p>
+<p>这个部分才是真正的数据存储片段。任何以read或者skip开头的方法都是从当前的readerIndex索引开始读取或者跳过数据，并且readerIndex索引根据读取的字节数自动增长。如果read操作的参数是一个ByteBuf，这个参数Buffer的writeIndex索引也会自动增加。</p>
+<p>如果接收参数ByteBuf没有剩余足够的内容空间，indexOtOfBoundException异常将会被触发。新分配的，包装的或者拷贝的Buffer的readerIndex默认值是0。</p>
+<p>下面代码演示如何读取所有可读的数据。</p>
+<p><em>Listing 5.8 Read data</em></p>
+<div class="highlight-python"><div class="highlight"><pre>// Iterates the readable bytes of a buffer.
+ByteBuf buffer = ...;
+while (buffer.readable()) {
+     System.out.println(buffer.readByte());
+}
+</pre></div>
 </div>
+</div>
+<div class="section" id="id8">
+<h3>可写字节<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h3>
+<p>这部分是未定义的空间，是用来填写数据的。任何以write开头的方法的操作都会从当前的writerIndex索引开始写入数据，并且writeIndex索引根据写入的字节数自动增加。如果write操作的的参数也是一个ByteBuf，参数ByteBuf的readerIndex也会自动增加。</p>
+<p>如果没有剩余足够的可写字节，则会抛出IndexOutOfBoundException异常。新分配buffer的wrterIndex索引值是0。</p>
+<p>下面代码例子演示了用随机int数字填入buffer中，直到填满为止。</p>
+<p><em>Listing 5.9 Write data</em></p>
+<div class="highlight-python"><div class="highlight"><pre>// Fills the writable bytes of a buffer with random integers.
+ByteBuf buffer = ...;
+while (buffer.writableBytes() &gt;= 4) {
+     buffer.writeInt(random.nextInt());
+}
+</pre></div>
+</div>
+</div>
+<div class="section" id="buffer">
+<h3>清空buffer索引<a class="headerlink" href="#buffer" title="Permalink to this headline">¶</a></h3>
+<p>通过调用clear()方法可以把readerIndex和writerIndex设置为0。他不会清空buffer中的内容，只是设置了两个指针指向0。请注意这里的clear的意思不同于JDK中ByteBuffer.clear()。</p>
+<p>让我们看一下他的功能。下图是一个ByteBuf的三个不同数据片段。</p>
+<img alt="_images/5.6.png" src="_images/5.6.png" />
+<p>上图所示，在调用clear()方法之前，有三个数据片段。在调用之后，数据片段已经被改变，如下图所示。</p>
+<img alt="_images/5.7.png" src="_images/5.7.png" />
+<p>对比discardReadBytes()，clear()操作是非常廉价的，他只是移动指针不需要任何的内存拷贝。</p>
+</div>
+<div class="section" id="id9">
+<h3>查询操作<a class="headerlink" href="#id9" title="Permalink to this headline">¶</a></h3>
+<p>各种个样的indexOf()方法，能够帮助我们找到满足一定条件的索引。复杂的动态顺序搜索和简单的静态单字节搜索都可以使用ByteBufProcessor的实现来完成。</p>
+<p>如果你正在解码可变长度的数据，如NULL结尾的字符串，你会发现bytesBefore(byte)方法很有用。让我们来想象一下你写的一个应用程序，需要用到socket，并且用到了NULL结尾的字符串内容。使用bytesBefore()方法，你很容易的消费这些数据，也不需要手工的去读取每个字节去检查NULL结尾的字节。不用ByteBufProcessor的话，你需要自己来实现这些所有的方法。此外，ByteBufProcessor是更有效的，因为他在处理过程中只需要很少的“约束检查”。</p>
+</div>
+<div class="section" id="id10">
+<h3>标记和重置<a class="headerlink" href="#id10" title="Permalink to this headline">¶</a></h3>
+<p>在说明之前，我们先在buffer中设置两个标记索引。其中一个是存储readerIndex索引，另一个是存储writerIndex索引。你可以调用reset方法来复位标记的读写索引(readerIndex,wrtiterIndex)。这个方法类似在InputStream中流行的mark,reset方法，但是这里的reset方法没有读限制。</p>
+<p>此外，你也可用通过调用readerIndex(int)和writerIndex(int)方法来设置读写索引(readerIndex,writerIndex)。如果设置readerIndex或者writerIndex是一个非法的位置将会引起IndexOutOfBoundException异常。</p>
+</div>
+<div class="section" id="id11">
+<h3>衍生的Buffers<a class="headerlink" href="#id11" title="Permalink to this headline">¶</a></h3>
+<p>根据已存在的buffer通过调用duplicte(),slice(),slice(int,int),readOnly()或者order(ByeOrder)创建一个视图。一个衍生出来的buffer有独立的readerInder,writerIndex和标记索引，但是他共享其他的内部数据，和NIO的ByteBuffer方式一样。因为共享了内部数据，他的创建是很廉价的，也是创建的优先选择方式，比如在一个操作中，你需要ByteBuf的一部分数据。</p>
+<p>如果你需要从一个已存在的Buffer中的拷贝一个新的Buffer，可以使用copy()或者copy(int,int)方法代替。下面代码展示如何使用ByteBuf的slice方法。</p>
+<p><em>Listing 5.10 Slice a ByteBuf</em></p>
+<div class="highlight-python"><div class="highlight"><pre>Charset utf8 = Charset.forName(&quot;UTF-8&quot;);
+ByteBuf buf  = Unpooled.copiedBuffer(&quot;Netty in Action rocks!&quot;,utf8);    #1
+
+ByteBuf sliced = buf.slice(0,14);                                       #2
+System.out.println(sliced.toString(utf8);                               #3
+
+buf.setByte(0, (byte) &#39;J&#39;);                                             #4
+assert buf.get(0) == sliced.get(0);                                     #5
+
+#1 用给定的字符串创建一个ByteBuf
+#2 用buf的0～14字节切割一个新的ByteBuf
+#3 包含&quot;Netty in Action&quot;
+#4 更新buf中0位的字节。
+#5 比较buf和sliced的第一个字节，他们是相等的，因为她们共用同样的内容。
+</pre></div>
+</div>
+<p>现在让我们来看看如何通过ByteBuf的copy来创建一个ByteBuf和slice方法创建有何不同。下面代码展示ByteBuf的copy是如何工作的。</p>
+<p><em>Listing 5.11 Copying a ByteBuf</em></p>
+<div class="highlight-python"><div class="highlight"><pre>Charset utf8 = Charset.forName(&quot;UTF-8&quot;);
+ByteBuf buf  = Unpooled.copieBuffer(&quot;Netty in Action rocks!&quot;, utf8);   #1
+
+ByteBuf copy = buf.copy(0, 14);                                        #2
+System.out.println(copy.toString(utf8);                                #3
+
+buf.setByte(0, (byte) &#39;J&#39;);                                            #4
+assert buf.get(0) != copy.get(0);                                      #5
+
+
+#1 用给定的字符串创建一个ByteBuf
+#2 用buf的0～14字节拷贝一个新的ByteBuf
+#3 包含&quot;Netty in Action&quot;
+#4 更新buf中0位的字节。
+#5 比较buf和sliced的第一个字节，他们是不相等的，因为她们没有共用同样的内容。
+</pre></div>
+</div>
+<p>该API是相同的，但是修改内容的影响，衍生的ByteBuf是不相同的。</p>
+<p>无论什么时候尽可能的使用slice方法，并且在必须的时候才使用copy方法。创建一个ByteBuf的拷贝更昂贵，因为他需要内存拷贝。</p>
+</div>
+<div class="section" id="id12">
+<h3>读写操作<a class="headerlink" href="#id12" title="Permalink to this headline">¶</a></h3>
+<p>有两种类型的读写操作：</p>
+<blockquote>
+<div><ul class="simple">
+<li>基于位置索引下标读写操作(get/set)，他只读取指定位置的字节或者设置指定位置的字节。</li>
+<li>任何的读写操作(read/write)都会从当前的读写索引(readerIndex,writerIndex)开始读写，并且读写索引会自动增加。</li>
+</ul>
+</div></blockquote>
+<p><em>(译者注：简单说读写分两种情况，一种是不会改变读写索引的，另一中是会改变读写索引的。后面列出的都是一些方法，这里就不一一列出了，更多请看Netty API docs)</em></p>
+</div>
+<div class="section" id="id13">
+<h3>其他有用的一些操作<a class="headerlink" href="#id13" title="Permalink to this headline">¶</a></h3>
+<p>其实还有其他很有用的方法没有提及到，但是我们可能经常会用到。下图列出一些方法并且解释她们是做什么用的。</p>
+<img alt="_images/table5.5.png" src="_images/table5.5.png" />
+<p>你可能经常用到一下POJOS对象，需要存储她们并且恢复成POJO对象。通常，保持这些被包含的对象是很重要的。为了这个目的，Netty提供了其他的数据容器叫做MessageBuf。</p>
+</div>
+</div>
+<div class="section" id="bytebufholder">
+<h2>ByteBufHolder<a class="headerlink" href="#bytebufholder" title="Permalink to this headline">¶</a></h2>
+<p>(待续。。。)</p>
 </div>
 </div>
 
@@ -225,8 +332,16 @@ for (int i = 0; i &lt; buffer.capacity(); i ++) {
 <li><a class="reference internal" href="#id5">顺序访问索引</a></li>
 <li><a class="reference internal" href="#id6">可废弃的字节</a></li>
 <li><a class="reference internal" href="#id7">可读字节(实际的内容)</a></li>
+<li><a class="reference internal" href="#id8">可写字节</a></li>
+<li><a class="reference internal" href="#buffer">清空buffer索引</a></li>
+<li><a class="reference internal" href="#id9">查询操作</a></li>
+<li><a class="reference internal" href="#id10">标记和重置</a></li>
+<li><a class="reference internal" href="#id11">衍生的Buffers</a></li>
+<li><a class="reference internal" href="#id12">读写操作</a></li>
+<li><a class="reference internal" href="#id13">其他有用的一些操作</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#bytebufholder">ByteBufHolder</a></li>
 </ul>
 </li>
 </ul>

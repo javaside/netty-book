@@ -11,7 +11,7 @@ Netty In Action (Netty4.0) 翻译
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
    buffer.rst
 
