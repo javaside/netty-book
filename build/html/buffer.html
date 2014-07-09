@@ -48,7 +48,7 @@
             
   <div class="section" id="buffers">
 <h1>第五章 Buffers<a class="headerlink" href="#buffers" title="Permalink to this headline">¶</a></h1>
-<p>(<em>翻译很生硬，仅做互相学习交流使用，发现问题欢迎反馈。2014-07-08更新</em>)</p>
+<p>(<em>翻译很生硬，仅做互相学习交流使用，发现问题欢迎反馈。2014-07-09更新</em>)</p>
 <div class="section" id="buffer-api">
 <h2>Buffer API<a class="headerlink" href="#buffer-api" title="Permalink to this headline">¶</a></h2>
 <p>Netty的Buffer API 包含两个接口:</p>
@@ -298,12 +298,40 @@ assert buf.get(0) != copy.get(0);                                      #5
 <h3>其他有用的一些操作<a class="headerlink" href="#id13" title="Permalink to this headline">¶</a></h3>
 <p>其实还有其他很有用的方法没有提及到，但是我们可能经常会用到。下图列出一些方法并且解释她们是做什么用的。</p>
 <img alt="_images/table5.5.png" src="_images/table5.5.png" />
-<p>你可能经常用到一下POJOS对象，需要存储她们并且恢复成POJO对象。通常，保持这些被包含的对象是很重要的。为了这个目的，Netty提供了其他的数据容器叫做MessageBuf。</p>
-</div>
+<p>你可能经常用到一下POJO对象，需要存储她们并且恢复成POJO对象。通常，保持这些被包含的对象的顺序是很重要的。为了这个目的，Netty提供了其他的数据容器叫做MessageBuf。</p>
 </div>
 <div class="section" id="bytebufholder">
-<h2>ByteBufHolder<a class="headerlink" href="#bytebufholder" title="Permalink to this headline">¶</a></h2>
+<h3>ByteBufHolder<a class="headerlink" href="#bytebufholder" title="Permalink to this headline">¶</a></h3>
+<p>通常，你有一个对象持有字节和其他的属性，比如一个HTTP的response对象。他有一些属性，如状态码，cookies等等，但是实际上他的内容是字节。</p>
+<p>由于这种场景是常见的，Netty 提供了一个ByteBufHolder抽象类。这样使得Netty可以使用像缓存池这些高级功能，ByteBuf持有的数据可从缓存池中获取，同时Netty还可以自动释放他们。</p>
+<p>事实上ByteBufHolder只有很少的方法去访问他持有的数据和使用引用计数。如果你想实现一个&#8221;message object&#8221; 用ByteBuf 来存储&#8221;payload/data&#8221;，最好的方法就是使用ByteBufHolder 类。</p>
+<p>(<em>这接口的data()方法已经修改成content()</em>)</p>
+</div>
+</div>
+<div class="section" id="netty-buffer">
+<h2>Netty buffer 的工具类<a class="headerlink" href="#netty-buffer" title="Permalink to this headline">¶</a></h2>
+<p>使用JDK NIO API是很困难的。但是Netty各种各样的Buf 实现是非常容易使用，Netty已经提供一系列的工具类来创建和使用各种各样的Buffer。在这段，我们看三个工具类，因为你在使用Netty时最有用的工具类。</p>
+<div class="section" id="bytebufallocator-bytebuf">
+<h3>ByteBufAllocator - 分配ByteBuf<a class="headerlink" href="#bytebufallocator-bytebuf" title="Permalink to this headline">¶</a></h3>
+<p>前面我们提及过，Netty为各种各样的ByteBuf实现提供缓存池支持。Netty 提供了ByteBufAllocator来实现这些功能。从类的名称就可以看出他是负责分配前面提到过的各种类型的ByteBuf实例。不管是否是缓存的还是不指定的其他实现，都不会改变ByteBuf的操作。</p>
+<p>ByteBufAllocator 提供了很多方法，这里不在一一列出，详情请看API docs。</p>
+<p>ByteBufAllocator 里的方法提供了一些额外的参数用来设置ByteBuf的初始容量和最大容量。你要记住ByteBuf是可以根据需要扩大容量的，直到扩大到最大容量为止。</p>
+<p>获取ByteBufAllocator的引用是很简单的，你可以通过channel或者ChannelHandlerContext获取。</p>
+<p>Netty 有两个不同的ByteBufAllocator实现。一个是实现ByteBuf缓存池,他可以减少内存的消耗和保持最小的内存碎片。事实上这些实现已经不是本书的讨论范围，但是让我们注意他是基于jemalloc和利用操作系统相同的算法来高效的分配内存。</p>
+<p>另外一个实现不是缓存池的。Netty 默认使用PooledByteBufAllocator，也可以非常容易的通过ChannelConfig来修改。</p>
+</div>
+<div class="section" id="unpooled-buffer">
+<h3>Unpooled - 创建Buffer很容易<a class="headerlink" href="#unpooled-buffer" title="Permalink to this headline">¶</a></h3>
+<p>很多场景你不能访问前面提到的ByteBuf，因为你没有ByteBufAllocator的引用。针对这个，Netty提供了一个Unpooled的工具类。这类提供了静态的帮助方法去创建没有使用缓存的ByteBuf实例。</p>
+<p>他提供的方法不一一列举，请看API docs。</p>
+<p>Unpooled工具类使得在Netty以外也可以很容易的使用Netty buffer API，你会发现他很有用，可以受益于高性能可扩展的Buffer API，又不需要Netty的其他部分。</p>
+</div>
+<div class="section" id="bytebufutil">
+<h3>ByteBufUtil - 小但是很有用<a class="headerlink" href="#bytebufutil" title="Permalink to this headline">¶</a></h3>
+<p>其他有用的类是ByteBufUtil。这个类提供一些静态的帮助方法，当我们操作ByteBuf，这些方法是很有用的。最主要的一个原因是，这些方法不依赖ByteBuf是否被缓存。</p>
+<p>最可贵的是他提供了静态方法hexdump()。他可以输出16进制内容。在很多场景中这是很有用的。十六进制值可以很容易地转换回实际字节表示。你可能想知道为什么不能直接打印这些字节，问题是，这可能会导致难以阅读。</p>
 <p>(待续。。。)</p>
+</div>
 </div>
 </div>
 
@@ -339,9 +367,15 @@ assert buf.get(0) != copy.get(0);                                      #5
 <li><a class="reference internal" href="#id11">衍生的Buffers</a></li>
 <li><a class="reference internal" href="#id12">读写操作</a></li>
 <li><a class="reference internal" href="#id13">其他有用的一些操作</a></li>
+<li><a class="reference internal" href="#bytebufholder">ByteBufHolder</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#bytebufholder">ByteBufHolder</a></li>
+<li><a class="reference internal" href="#netty-buffer">Netty buffer 的工具类</a><ul>
+<li><a class="reference internal" href="#bytebufallocator-bytebuf">ByteBufAllocator - 分配ByteBuf</a></li>
+<li><a class="reference internal" href="#unpooled-buffer">Unpooled - 创建Buffer很容易</a></li>
+<li><a class="reference internal" href="#bytebufutil">ByteBufUtil - 小但是很有用</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

@@ -2,7 +2,7 @@
 第五章 Buffers
 ======================
 
-(*翻译很生硬，仅做互相学习交流使用，发现问题欢迎反馈。2014-07-08更新*)
+(*翻译很生硬，仅做互相学习交流使用，发现问题欢迎反馈。2014-07-09更新*)
 
 
 
@@ -354,12 +354,62 @@ ByteBuf提供两个指针变量来实现顺序读写操作，readerIndex用于�
 .. image::  _static/image/table5.5.png
 
 
-你可能经常用到一下POJOS对象，需要存储她们并且恢复成POJO对象。通常，保持这些被包含的对象是很重要的。为了这个目的，Netty提供了其他的数据容器叫做MessageBuf。
+你可能经常用到一下POJO对象，需要存储她们并且恢复成POJO对象。通常，保持这些被包含的对象的顺序是很重要的。为了这个目的，Netty提供了其他的数据容器叫做MessageBuf。
 
 
 ByteBufHolder
+----------------
+
+通常，你有一个对象持有字节和其他的属性，比如一个HTTP的response对象。他有一些属性，如状态码，cookies等等，但是实际上他的内容是字节。
+
+
+由于这种场景是常见的，Netty 提供了一个ByteBufHolder抽象类。这样使得Netty可以使用像缓存池这些高级功能，ByteBuf持有的数据可从缓存池中获取，同时Netty还可以自动释放他们。
+
+事实上ByteBufHolder只有很少的方法去访问他持有的数据和使用引用计数。如果你想实现一个"message object" 用ByteBuf 来存储"payload/data"，最好的方法就是使用ByteBufHolder 类。
+
+(*这接口的data()方法已经修改成content()*)
+
+
+Netty buffer 的工具类
 ========================
 
+使用JDK NIO API是很困难的。但是Netty各种各样的Buf 实现是非常容易使用，Netty已经提供一系列的工具类来创建和使用各种各样的Buffer。在这段，我们看三个工具类，因为你在使用Netty时最有用的工具类。
+
+
+ByteBufAllocator - 分配ByteBuf
+--------------------------------
+前面我们提及过，Netty为各种各样的ByteBuf实现提供缓存池支持。Netty 提供了ByteBufAllocator来实现这些功能。从类的名称就可以看出他是负责分配前面提到过的各种类型的ByteBuf实例。不管是否是缓存的还是不指定的其他实现，都不会改变ByteBuf的操作。
+
+ByteBufAllocator 提供了很多方法，这里不在一一列出，详情请看API docs。
+
+
+ByteBufAllocator 里的方法提供了一些额外的参数用来设置ByteBuf的初始容量和最大容量。你要记住ByteBuf是可以根据需要扩大容量的，直到扩大到最大容量为止。
+
+
+获取ByteBufAllocator的引用是很简单的，你可以通过channel或者ChannelHandlerContext获取。
+
+Netty 有两个不同的ByteBufAllocator实现。一个是实现ByteBuf缓存池,他可以减少内存的消耗和保持最小的内存碎片。事实上这些实现已经不是本书的讨论范围，但是让我们注意他是基于jemalloc和利用操作系统相同的算法来高效的分配内存。
+
+另外一个实现不是缓存池的。Netty 默认使用PooledByteBufAllocator，也可以非常容易的通过ChannelConfig来修改。
+
+
+Unpooled - 创建Buffer很容易
+------------------------------
+
+很多场景你不能访问前面提到的ByteBuf，因为你没有ByteBufAllocator的引用。针对这个，Netty提供了一个Unpooled的工具类。这类提供了静态的帮助方法去创建没有使用缓存的ByteBuf实例。
+
+他提供的方法不一一列举，请看API docs。
+
+Unpooled工具类使得在Netty以外也可以很容易的使用Netty buffer API，你会发现他很有用，可以受益于高性能可扩展的Buffer API，又不需要Netty的其他部分。
+
+
+ByteBufUtil - 小但是很有用
+------------------------------
+
+其他有用的类是ByteBufUtil。这个类提供一些静态的帮助方法，当我们操作ByteBuf，这些方法是很有用的。最主要的一个原因是，这些方法不依赖ByteBuf是否被缓存。
+
+
+最可贵的是他提供了静态方法hexdump()。他可以输出16进制内容。在很多场景中这是很有用的。十六进制值可以很容易地转换回实际字节表示。你可能想知道为什么不能直接打印这些字节，问题是，这可能会导致难以阅读。
 
 
 (待续。。。)
