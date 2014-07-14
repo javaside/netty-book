@@ -1,0 +1,203 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>第六章 ChannelHandler &mdash; netty-book v1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     'v1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="netty-book v1.0.0 documentation" href="index.html" />
+    <link rel="prev" title="第五章 Buffers" href="buffer.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="buffer.html" title="第五章 Buffers"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">netty-book v1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="channelhandler">
+<h1>第六章 ChannelHandler<a class="headerlink" href="#channelhandler" title="Permalink to this headline">¶</a></h1>
+<p>(<em>翻译很生硬，仅做互相学习交流使用，发现问题欢迎反馈。2014-07-11更新</em>)</p>
+<p>本章内容</p>
+<blockquote>
+<div><ul class="simple">
+<li>ChannelPipeline</li>
+<li>ChannelHandlerContext</li>
+<li>ChannelHandler</li>
+<li>InBound和OutBound</li>
+</ul>
+</div></blockquote>
+<p>接受和创建连接只是你应用程序的一部分，我们还需要编写很复制的代码去处理输入和输出的数据。</p>
+<p>Netty 提供了很强大的方法来处理这些问题。他允许在处理数据的ChannelHandler上使用钩子。他还提供了ChannelHandler链，每个ChannelHander处理小的任务。这样有助于你写的干净和可重用的实现。</p>
+<p>用ChnnelHandler处理数据也只是其中一个用法，你还可以用来废止I/O操作，而所有这一切都是实时的。</p>
+<div class="section" id="channelpipeline">
+<h2>ChannelPipeline<a class="headerlink" href="#channelpipeline" title="Permalink to this headline">¶</a></h2>
+<p>ChannelPipeline 是一个list,包含多个拦截和处理输入和输出操作的ChannelHandler实例。ChannelPipeline提供了拦截过滤器模式的一种高级形式，让用户完全控制如何处理事件，以及如何在ChannelPipeline的ChannelHandlers彼此交互。</p>
+<p>对于每一新的channel,一个新的ChannelPipeline被创建和添加到channel中。一旦添加到channel中，channel和CahnnelPileline的关联是不变的。channel不能添加其他的ChannelPipelie,也不能分离channle当前关联的ChannelPipeline。所有这些已经帮你处理了，你不需要处理他。</p>
+<p>下图展示了ChannelHandlers在一个ChannelPipeline中典型的处理I/O流程。一个I/O操作可以被ChannelInboundHendler和ChannelOutboundHandler其中一个处理，然后通过调用ChannelInboundInvoker或者ChannleOutboundInvoker接口定义的方法转向最近的一个handler处理。ChannelPipeline扩展了他们两个。</p>
+<p>(<em>新版中ChannelInboundInvoker，ChannleOutboundInvoker已废弃。使用TailContext，HeadContext内部类替代</em>)</p>
+<img alt="_images/6.1.png" src="_images/6.1.png" />
+<p>从上图可以看出，ChannelPipeline主要是ChannelHandler组成的一个列表(list)。如果一个inbound(读数据) I/O事件被触发，他会从ChannelPipeline开始传递到末端。对于outbount(写数据) I/O 事件，他会从ChannelPipelined的末端传递到开始。ChannelPipeline通过检查类型，知道ChannelHandler能否处理这事件。如果不能处理他，他会跳过这个ChannelHandler，使用下一个匹配的ChannelHandler处理。在ChannelPipeline上的修改是实时的，这意味着你可以添加、删除、替换ChannelHandler。这允许写入灵活的逻辑，如多路复用器。在本章后面我们会更详细的说明。</p>
+<p>现在让我们看一下怎样修改一个ChannelPipeline。</p>
+<img alt="_images/t6.1.png" src="_images/t6.1.png" />
+<p>下面代码演示了如何使用这些方法来修改ChannelPipeline.</p>
+<p><em>Listing 6.1 Modify the ChannelPipeline</em></p>
+<div class="highlight-python"><div class="highlight"><pre>ChannelPipeline pipeline = ..;
+FirstHander firstHandler = new FirstHandler();                  #1
+pipeline.addLast(&quot;handler1&quot;, firstHandler);                     #2
+pipeline.addFirst(&quot;handler2&quot;, new SecondHandler());             #3
+pipeline.addLast(&quot;handler3&quot;, new ThirdHandler());               #4
+
+pipeline.remove(&quot;handler3&quot;);                                    #5
+pipeline.remove(firstHandler);                                  #6
+
+pipeline.replace(&quot;handler2&quot;,&quot;handler4&quot;, new ForthHandler());    #7
+
+
+#1 创建一个FirstHanlder实例
+#2 添加FirstHandler实例到ChannelPipeline中。
+#3 添加SecondHandler实例到ChannelPipeline第一个位置中，这意味着他在已存在的FirstHandler前面。
+#4 添加ThirdHandle到ChannelPipeline中的最后位置。
+#5 删除名称为handler3的ThirdHanlder。
+#6 通过引用实例删除FirstHandler。
+#7 用ForthHandler替换已添加的handler2，并且命名为hander4
+</pre></div>
+</div>
+<p>正如你看到的，修改ChannelPipeline很容易，并且允许你根据需求添加，删除，替换ChannelHandler。</p>
+<p>他允许你修改ChannelPipeline，也有一些让你访问被添加的ChannelHandler实现，来检查特定的ChannelHandler是否存在ChannelPipeline中。</p>
+<img alt="_images/t6.2.png" src="_images/t6.2.png" />
+<p>ChannelPipeline 继承了ChannelInboundInvoker和ChannelOutboundInvoker，他暴露了调用inbound和outbound操作的额外方法。这些操作对于通知每一个ChannelPipeline中的ChannelInboundHandler处理不同的事件。（这些方法不再一一列出，请看API docs）</p>
+<p>(<em>新版中ChannelInboundInvoker，ChannleOutboundInvoker已废弃。使用TailContext，HeadContext内部类替代。</em>)</p>
+</div>
+<div class="section" id="channelhandlercontext">
+<h2>ChannelHandlerContext<a class="headerlink" href="#channelhandlercontext" title="Permalink to this headline">¶</a></h2>
+<p>每当一个ChannelHandler添加到ChannelPipeline，一个新的ChannelHandlerContext会被创建并且关联他。ChannelHandlerContext 允许ChannelHandler之间交互在同一个传输下，这部分和ChannelPipline有点相同。</p>
+<p>对于一个被添加的ChannelHandler，他的ChannelHandlerContext永远不会被改变，所以他可以从缓存中安全获取。</p>
+<p>ChannelHandlerContext实现了ChannelInboundInvoker和ChannelOutboundInvoker。他有很多方法都出现在Channel和ChannelPipeline中。不同之处是如果你调用这些方法在Channel或者ChannelPipeline上，他们总是经过完整的ChannelPipeline。相比之下，如果你调用ChannelHandlerContext中的方法，他从当前位置开始，通知在ChannelPipeline里最近的ChannelHandler来处理事件。</p>
+<div class="section" id="id1">
+<h3>通知下一个ChannelHandler<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<p>你可以通过调用ChannelInboundInvoker和ChannelOutbountdInvoker中的方法来通知在相同ChannelPipeline中最近的handler。从哪里开始通知，取决于你对通知的设置。</p>
+<p>下图中显示ChannelHandlerContext是如何属于ChannelHandler和绑定到ChannelPipeline上的。</p>
+<img alt="_images/6.2.png" src="_images/6.2.png" />
+<p>现在，如果你想有贯穿整个ChannelPipeline的事件流，这里有两个不同的方法：</p>
+<blockquote>
+<div><ul class="simple">
+<li>调用Channel上的方法</li>
+<li>调用ChannelPipeline上的方法。</li>
+</ul>
+</div></blockquote>
+<p>这两种方法让事件流贯穿整个ChannelPipeline，从头开始还是从末尾开始贯穿ChannelPipeline要取决于事件的性质，如果是一个inbound时间，他从头开始，如果是一个outbound事件，他从尾开始。</p>
+<p>下面代码展示一个write事件怎么从ChannelPipeline的尾端开始通过ChannelPipeline。（他是一个outbound操作）</p>
+<p><em>Listing 6.2 Events via Channel</em></p>
+<div class="highlight-python"><div class="highlight"><pre>ChannelHandlerContext ctx = ..;
+Cahnnel channel = ctx.channel();                                                #A
+channel.write(Unpooled.copiedBuffer(&quot;Action in Action&quot;,CharsetUtil.UTF_8)       #B
+
+#A 获取属于ChannelHandlerContext的Channel引用。
+#B 通过channel写数据。
+</pre></div>
+</div>
+<p>这个消息流通过整个ChannelPipeline。你可以通过ChannelPipeline做同样的事情。如下所示</p>
+<p><em>Listing 6.3 Events via ChannelPipeline</em></p>
+<div class="highlight-python"><div class="highlight"><pre>ChannelHandlerContext ctx = ..;
+ChannelPipeline pipeline = ctx.pipeline();                                      #A
+pipeline.write(Unpooled.copiedBuffer(&quot;Action in Action&quot;,CharsetUtil.UTF_8)      #B
+
+#A 从ChannelHandlerContext 获取一个ChannlePipeline的引用
+#B 通过ChannelPipeline 写数据。
+</pre></div>
+</div>
+<p>消息流通过整个ChannelPipeline。上面的两个列子在事件流关系上，她们的操作都是相等的。你也应该注意到Channel和ChannelPipeline都可以从ChannelHandlerContext访问到。</p>
+<p>下图展示被Channel或者ChannelPipeline触发的事件流。</p>
+<img alt="_images/6.3.png" src="_images/6.3.png" />
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">第六章 ChannelHandler</a><ul>
+<li><a class="reference internal" href="#channelpipeline">ChannelPipeline</a></li>
+<li><a class="reference internal" href="#channelhandlercontext">ChannelHandlerContext</a><ul>
+<li><a class="reference internal" href="#id1">通知下一个ChannelHandler</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="buffer.html"
+                        title="previous chapter">第五章 Buffers</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="buffer.html" title="第五章 Buffers"
+             >previous</a> |</li>
+        <li><a href="index.html">netty-book v1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, zhouxh.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>
