@@ -1,7 +1,7 @@
 ===========================
 第六章 ChannelHandler
 ===========================
-(*翻译很生硬，仅做互相学习交流使用，发现问题欢迎反馈。2014-07-14更新*)
+(*翻译很生硬，基本不通，不要浪费时间。本人也是读这本书时顺便记录下来。2014-07-15更新*)
 
 
 本章内容
@@ -28,7 +28,7 @@ ChannelPipeline 是一个list,包含多个拦截和处理输入和输出操作�
 
 下图展示了ChannelHandlers在一个ChannelPipeline中典型的处理I/O流程。一个I/O操作可以被ChannelInboundHandler和ChannelOutboundHandler其中一个处理，然后通过调用ChannelInboundInvoker或者ChannleOutboundInvoker接口定义的方法转向最近的一个handler处理。ChannelPipeline扩展了他们两个。
 
-(*新版中ChannelInboundInvoker，ChannleOutboundInvoker已废弃。使用TailContext，HeadContext内部类替代*)
+(*新版中ChannelInboundInvoker，ChannleOutboundInvoker已废弃。使用ChannelHandlerContext接口替代*)
 
 .. image:: _static/image/6.1.png
 
@@ -76,7 +76,7 @@ ChannelPipeline 是一个list,包含多个拦截和处理输入和输出操作�
 ChannelPipeline 继承了ChannelInboundInvoker和ChannelOutboundInvoker，他暴露了调用inbound和outbound操作的额外方法。这些操作对于通知每一个ChannelPipeline中的ChannelInboundHandler处理不同的事件。（这些方法不再一一列出，请看API docs）
 
 
-(*新版中ChannelInboundInvoker，ChannleOutboundInvoker已废弃。使用TailContext，HeadContext内部类替代。*)
+(*新版中ChannelInboundInvoker，ChannleOutboundInvoker已废弃。使用ChannelHandlerContext接口替代。*)
 
 
 
@@ -309,4 +309,132 @@ Netty 为ChannelHandler提供了一个实现骨架，叫做ChannelhandlerAdapter
 Inbound handlers
 --------------------
 
+	Inbound handlers 处理inbound事件和状态改变。这节我们讨论不同的ChannelHandler子类允许你用inbound逻辑实现钩子。
 
+ChannelInboundHandler
+_______________________
+
+ChannelInboundHandler 提供了被Channel调用后状态的改变和数据的接收的方法。这些方法映射到channel状态模型的解释在上个章节有详细说明。
+
+*(ChannelInboundHandler 提供的方法不在列出，情况API)*
+
+
+ChannelInboundHandler这些方法都是ChannelInboundInvoker方法的副本，他实际上是ChannelHandlerContext和ChannelPipeline的扩展。
+
+
+(*新版中ChannelInboundInvoker，ChannleOutboundInvoker已废弃。使用ChannelHandlerContext接口替代。*)
+
+
+
+ChannelStateHandler是ChannelHnadler的子类，他暴露了上面提到的所有方法。
+
+
+
+Netty 提供了 ChannelInboundHandler的骨架，叫做ChannelInboundHandlerAdapter。他提供了所有这些方法的基本实现，你可以只要实现(覆盖)你感兴趣的方法即可。所有这些方法的实现，默认的，转发事件到下一个ChannelInboundHandler是通过在ChannelHandlerContext上调用相同的方法。
+
+
+重点注意ChannelInboundHandler是哪个handler接收数据，并且覆盖的channelRead(...)方法要负责释放资源。特别重要的是,Netty 使用了ByteBuf的资源缓存池，如果你忘记是否资源，将会发生资源泄漏，导致结束。
+
+*Listing 6.8 Handler to discard data*
+::
+	@Shareble
+	public class DiscardHandler extends ChannelInboundHandlerAdapter{		#1
+	
+		@Override
+		public void channelRead(ChannelHandlerContext ctx,Object msg){
+			ReferenceContUtil.release(msg);					#2
+		}
+	}
+ 
+
+	#1 继承ChannelInboundHandlerAdapter
+	#2 丢弃接收到的数据，然后传递给ReferenceCountUtil.release(...)
+	
+
+错过把消息传递个ReferenceCountUtil.releas(...)将会影响到资源的泄漏。
+
+幸运的是Netty以WARN级别日志记录错过释放的资源，所以会很容易的找到他。
+
+手动释放资源很麻烦，SimpleChannelInboundHandler可以自动处理好，你根本是需要关注他。这里最重要的东西就是，你是否使用了SimpleChannelInboundHandler,一旦经过他处理，他会释放这消息资源，所以你不必存一个引用以后使用。
+
+那上面的例子我们如何修改?请看下面使用SimpleChannelInboundHandler实现的代码
+
+*Listing 6.9 Handler to discard data*
+::
+	@Shareble
+	public class DiscardHandler extends ChannelInboundHandlerAdapter<Object>{		#1
+	
+		@Override
+		public void channelRead(ChannelHandlerContext ctx,Object msg){
+			//No need to do anything special					#2
+		}
+	}
+ 
+
+	#1 继承ChannelInboundHandlerAdapter
+	#2 丢弃接收到的数据，但不需要任何资源释放。
+
+
+如果你需要知道关于其他状态的变化，你应该覆盖覆盖handler的其他方法。
+
+你可能经常对byte解码成自定义的消息类型，而且你想实现ChannelInboundHandler或者继承ChannelInboundHandlerAdapter。第二种处理方式是一种比较好的解决方案。这些各种各样的功能用code框架非常容易实现，后面章节会讲到Code框架。现在让我们完成接收数据的ChannelHandler。
+
+
+按照你的需要来决定是否使用ChannelInboundHandler,ChannelInboundHandlerAdapter,SimpleChannelInboundHandler。大部分时间，你使用SimpleChannelInboundHandler处理消息，使用ChannelInboundHandlerAdapter来处理其他的inbound事件和状态变化。
+
+ChannelInitializer
+______________________
+
+ChannelInitializer是一个稍微修改过的ChannelInboundHandler，应该多注意。他做的事情就和他的名字一样。他允许你初始化Channel，一旦Channel注册了EventLoop,并且准备处理I/O。
+
+ChannelInitializer主要是用来为每个创建的Channel建立ChannelPipeline。这部分在boostrappin章节说到。现在让我们记住他是ChannelInboundHandler的一个附加的类。
+
+
+Outbound handlers
+-------------------
+
+现在你看看ChannelHandler是如何允许你设置钩子来处理inbound操作和数据的，同时看看那些允许你处理outbound操作和数据的ChannelHandler实现。这节我们将讨论这些。
+
+
+ChannelOutboundhandler
+________________________
+
+ChannelOutboundHandler 提供了outbound请求操作的方法调用。这些方法在ChannelOutboundInvoker接口里列出，他是Channel,ChannelPipeline,ChannelHandlerContext的延伸。
+
+*(ChannelOutboundInvoker 新版已废弃，已被ChannelHandlerContext替换)*
+
+实现ChannelOutboundHandler和在一个请求上延迟操作,使得他非常强大。这里打开一个强大并且灵活的方法去处理请求。例如，没有任何数据被发送，你可以延迟flush操作。
+
+ChannelOutboundHanderl是ChannelHandler的一个子类，并且暴露了他所有的方法。
+
+所有这些方法都有一个ChannelPromise参数（后面无法翻译，理解了在补上）
+
+Netty 提供了一个ChannelOutboundHandler实现骨架，叫做ChannelOutboundHandlerAdapter。他提供了所有方法的基本实现，也允许你实现(覆盖)你感兴趣的方法。所有这些方法的实现，默认，在ChannelPipeline里通过ChannelHandlerContext相同的方法调用来转发下一个ChannelOutboundHandler。
+
+他和ChannleInboundHandler相同，如果你处理一个写操作并且丢弃信息，你需要负责去释放他。
+
+
+现在让我们来看一下在实践中如何使用他。下面代码将展示一个实现丢弃所有写的数据。
+
+*Listing 6.10 Handler to discard outbound data*
+::
+	@Sharable
+	public class DiscardOutboundHandler exends ChannelOutboundHandlerAdapter{			#1
+		
+		@Override
+		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise){
+			ReferenceCountUtil.release(msg);						#2
+			
+			promise.setSuccess();								#3
+		}
+	}
+
+
+	#1 继承ChannelOutboundHandlerAdapter
+	#2 使用ReferenceCountUtil.release(...)释放资源。
+	#3 通知ChannelPromise 数据已经处理过了。
+
+
+记住释放资源和通知ChannelPromise是很重要的。如果ChannelPromise 没有被通知，他可能导致ChannelFutureListener也不会被通知关于消息的处理。
+
+（完）

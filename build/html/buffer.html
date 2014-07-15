@@ -25,6 +25,7 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="netty-book v1.0.0 documentation" href="index.html" />
+    <link rel="next" title="第六章 ChannelHandler" href="channelhandler.html" />
     <link rel="prev" title="Netty In Action (Netty4.0) 翻译" href="index.html" /> 
   </head>
   <body>
@@ -34,6 +35,9 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="channelhandler.html" title="第六章 ChannelHandler"
+             accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="index.html" title="Netty In Action (Netty4.0) 翻译"
              accesskey="P">previous</a> |</li>
@@ -48,7 +52,7 @@
             
   <div class="section" id="buffers">
 <h1>第五章 Buffers<a class="headerlink" href="#buffers" title="Permalink to this headline">¶</a></h1>
-<p>(<em>翻译很生硬，仅做互相学习交流使用，发现问题欢迎反馈。2014-07-09更新</em>)</p>
+<p>(<em>翻译很生硬，基本不通，不要浪费时间。本人也是读这本书时顺便记录下来。2014-07-09更新</em>)</p>
 <div class="section" id="buffer-api">
 <h2>Buffer API<a class="headerlink" href="#buffer-api" title="Permalink to this headline">¶</a></h2>
 <p>Netty的Buffer API 包含两个接口:</p>
@@ -330,6 +334,7 @@ assert buf.get(0) != copy.get(0);                                      #5
 <h3>ByteBufUtil - 小但是很有用<a class="headerlink" href="#bytebufutil" title="Permalink to this headline">¶</a></h3>
 <p>其他有用的类是ByteBufUtil。这个类提供一些静态的帮助方法，当我们操作ByteBuf，这些方法是很有用的。最主要的一个原因是，这些方法不依赖ByteBuf是否被缓存。</p>
 <p>最可贵的是他提供了静态方法hexdump()。他可以输出16进制内容。在很多场景中这是很有用的。十六进制值可以很容易地转换回实际字节表示。你可能想知道为什么不能直接打印这些字节，问题是，这可能会导致难以阅读。</p>
+<p>(完)</p>
 </div>
 </div>
 </div>
@@ -382,6 +387,9 @@ assert buf.get(0) != copy.get(0);                                      #5
   <h4>Previous topic</h4>
   <p class="topless"><a href="index.html"
                         title="previous chapter">Netty In Action (Netty4.0) 翻译</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="channelhandler.html"
+                        title="next chapter">第六章 ChannelHandler</a></p>
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
@@ -405,6 +413,9 @@ assert buf.get(0) != copy.get(0);                                      #5
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              >index</a></li>
+        <li class="right" >
+          <a href="channelhandler.html" title="第六章 ChannelHandler"
+             >next</a> |</li>
         <li class="right" >
           <a href="index.html" title="Netty In Action (Netty4.0) 翻译"
              >previous</a> |</li>
