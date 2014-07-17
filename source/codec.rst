@@ -1,7 +1,7 @@
 ============================
 第七章 Codec
 ============================
-(*翻译很生硬，基本不通，不要浪费时间。本人也是读这本书时顺便记录下来。2014-07-16更新*)
+(*翻译很生硬，基本不通，不要浪费时间。本人也是读这本书时顺便记录下来。2014-07-17更新*)
 
 本章覆盖内容
 	* Codec
@@ -94,3 +94,43 @@ ByteToMessageDecoder提供了两个方法：
 
 ReplayDecoder
 -----------------
+
+ReplayDecoder 是字节到消息对象解码的特别抽象基类。如果在每次解码数据之前，你都必须检查是否有足够的数据，这会很难实现。ReplayDecoder包装了ByteBuf，他检查是否有足够的数据准备，如果没有，抛出Signal错误，在内部检测到并处理他。一旦Signal错误抛出,解码器停止。
+
+正因为这种包装，ReplayDecoder有些限制：
+
+	* 不是所有的ByteBuf操作都支持，如果调用不支持的操作，将会抛出UnreplayableOperationException异常。
+
+	* ByteBuf.readableBytes() 大多数时间都不会返回你期望的值。
+
+如果你能接受上面的局限性，你可以使用ReplayDecoder。经验法则是，如果你使用ByteToMessageDecoder没有引入太多的复杂性，那你可以使用它，否则，应该使用ReplayingDecoder。
+
+就像我之前说的那样，ReplayingDecoder继承了ByteToMessageDecoder，所以他暴露了同样的方法。
+
+现在我们用ReplayingDecoder实现ToIntegerDecoder,下面代码将展示他是如何的简单。
+
+*Listing 7.4 ReplayingDecoder decodes to integer*
+::
+	public class ToIntegerDecoder2 extends ReplayingDecoder<Void> {							#1
+	
+		@Override
+		public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {		#2
+			out.add(in.readInt());
+		}
+	}
+
+	#1 继承ReplayingDecoder
+	#2 从inbound ByteBuf 读取整数，并且加入到解码的消息列表中。
+
+当从inbound ByteBuf读取整数时，如果没有足够的可读字节，他会抛出一个signal错误，而且被缓存起来，所以一旦有跟多的数据decode(...)方法稍后会调用，否则把他加到消息列表中。
+
+对比7.4和7.3代码，很容易看出那个实现更简单明确。
+
+如果你需要实现一些更复杂的东西，你可以想象一下怎样简单的编码。同样，使用ReplayingDecoder或ByteToMessageDecoder往往是品味问题。这里一个重要的事实是，Netty为您提供了一些你可以轻松地使用的东西。你选择哪一个就看你了。
+
+但是如果我们要吧消息对象解码成另外一个消息对象，我们该做什么？你可以使用MessageToMessageDecoder，下节我们将解释他。
+
+对于更复杂的例子，请参考WebSocket08FrameDecoder或者在io.netty.handler.codec.http.websocketx包下的任何解码器。
+
+MessageToMessageDecoder-飞速的解码对象
+-------------------------------------------
