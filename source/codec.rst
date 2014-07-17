@@ -132,5 +132,54 @@ ReplayDecoder 是字节到消息对象解码的特别抽象基类。如果在每
 
 对于更复杂的例子，请参考WebSocket08FrameDecoder或者在io.netty.handler.codec.http.websocketx包下的任何解码器。
 
-MessageToMessageDecoder-飞速的解码对象
--------------------------------------------
+MessageToMessageDecoder
+----------------------------
+
+如果你想把一个消息解码成另一个类型的消息，MessageToMessageDecoder是非常容易做到这点的。他的语义和我之前解释过其他的解码器一样。
+
+我们再看看他的方法：
+
+	* decode(): 这个方法仅仅是一个抽象方法，你需要实现他。对于每个inbound 需要解码的消息他都会被调用，让你把消息解码成另一个消息。解码后的消息转发到下一个ChannelInboundHandler。
+
+	* decodeLast(): 此方法仅仅被调用一次，当Channel关闭连接时。如果你需要特别的处理，你可以覆盖此方法来实现他。
+
+为了说明如何使用，让我们看一个例子。设想一下，你需要吧整数转换成字符串。这应该在ChannelPipeline的一部分里实现，并且分开不同解码器来实现他，这样比较灵活且可以重用。
+
+
+下图是我们想实现类的实际逻辑。
+
+.. image:: _static/image/7.3.png
+
+这里的操作是一个消息，并不是字节。这inbound 消息是直接从decode(...)方法通过，然后解码成其他消息并且加入到解码后的消息列表中。
+
+所以，这解码器将接收inbound消息，然后解码，最后加入到解码后的消息列表中。解码成功后，他将把解码后的消息全部转发到下一个ChannelInboundHandler。
+
+让我们看看具体的实现我们的逻辑。
+
+*Listing 7.5 MessageToMessageDecoder decodes integer to string*
+::
+	public class IntegerToStringDecoder extends MessageToMesssageDecoder<Integer> {					#1
+		
+		@Override
+		public void decode(ChannelHandlerContext ctx, Integer msg, List<Object> out) throws Exception{
+			out.add(String.valueOf(msg);									#2
+		}
+	}
+
+	#1 继承MesssageToMessageDecoder
+	#2 用String.valueOf()把整数转换成字符串。
+
+在#1中，当我们实现继承MessageToMessageDecoder，把一个消息转换成另一个类型的消息是，这类型参数经常被指定输入参数，在这里，这个就是Integer类型。
+
+更复制的例子，请参考HttpObjectAggregator，在io.netty.handler.codec.http包中可以找到。
+
+
+解码器总结
+--------------
+你现在应该有良好的知识，知道Netty支持写解码器的基础抽象类和什么是好的解码器。解码器也只是其中一部分，这是因为大多数时间里，你也需要一种传输outbound数据的方法。这就是编码器，他是code 框架API的其他一个部分。
+
+下一节，我们将给你跟多深入的了解如何编写你的编码器。
+
+Encoders(编码器)
+====================
+*(待续)*
